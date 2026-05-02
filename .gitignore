@@ -6,3 +6,6 @@ uploads/
 .streamlit/secrets.toml
 uploads/
 __pycache__/
+.env
+.streamlit/secrets.toml
+uploads/
