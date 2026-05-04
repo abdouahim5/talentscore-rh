@@ -307,6 +307,10 @@ def fix_candidate_email_constraints():
         """))
 
         conn.execute(text("""
+            DROP TABLE IF EXISTS duplicate_cvs_to_delete;
+        """))
+
+        conn.execute(text("""
             CREATE TEMP TABLE duplicate_cvs_to_delete AS
             SELECT a.id
             FROM cvs a
@@ -563,6 +567,9 @@ def save_cv(candidate_name, candidate_email, phone, linkedin, availability,
 
 
 def candidature_exists(candidate_email, job_offer_id):
+    if job_offer_id is None:
+        return False
+
     with engine.begin() as conn:
         count = conn.execute(text("""
             SELECT COUNT(*)
@@ -623,9 +630,7 @@ def update_candidate_status(cv_id, status):
 
 def load_dashboard_stats():
     with engine.begin() as conn:
-        offers_count = conn.execute(text("""
-            SELECT COUNT(*) FROM job_offers WHERE is_active = TRUE
-        """)).scalar()
+        offers_count = conn.execute(text("SELECT COUNT(*) FROM job_offers WHERE is_active = TRUE")).scalar()
         candidates_count = conn.execute(text("SELECT COUNT(*) FROM cvs")).scalar()
         spontaneous_count = conn.execute(text("SELECT COUNT(*) FROM cvs WHERE job_offer_id IS NULL")).scalar()
         best_score = conn.execute(text("SELECT MAX(final_score) FROM cv_scores")).scalar()
@@ -693,8 +698,6 @@ Donne une note sur 100 selon ces critères :
 - Formation : 15 points
 - Outils et technologies : 15 points
 - Adéquation globale au poste : 15 points
-
-Le score global doit être la somme des 5 critères et ne doit pas dépasser 100.
 
 Réponds uniquement en JSON valide avec ce format :
 
@@ -810,7 +813,7 @@ if "selected_result_offer_id" not in st.session_state:
 
 
 # =====================================================
-# 8. DESIGN CSS
+# 8. CSS
 # =====================================================
 
 st.markdown("""
