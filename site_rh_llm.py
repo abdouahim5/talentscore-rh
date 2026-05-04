@@ -175,7 +175,6 @@ def compute_similarity(vec1, vec2):
 
 def create_tables():
     with engine.begin() as conn:
-
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS companies (
                 id SERIAL PRIMARY KEY,
@@ -294,21 +293,10 @@ def create_tables():
 
 def fix_candidate_email_constraints():
     with engine.begin() as conn:
-        conn.execute(text("""
-            ALTER TABLE cvs DROP CONSTRAINT IF EXISTS cvs_candidate_email_key;
-        """))
-
-        conn.execute(text("""
-            DROP INDEX IF EXISTS unique_candidate_email;
-        """))
-
-        conn.execute(text("""
-            DROP INDEX IF EXISTS unique_candidate_per_offer;
-        """))
-
-        conn.execute(text("""
-            DROP TABLE IF EXISTS duplicate_cvs_to_delete;
-        """))
+        conn.execute(text("ALTER TABLE cvs DROP CONSTRAINT IF EXISTS cvs_candidate_email_key;"))
+        conn.execute(text("DROP INDEX IF EXISTS unique_candidate_email;"))
+        conn.execute(text("DROP INDEX IF EXISTS unique_candidate_per_offer;"))
+        conn.execute(text("DROP TABLE IF EXISTS duplicate_cvs_to_delete;"))
 
         conn.execute(text("""
             CREATE TEMP TABLE duplicate_cvs_to_delete AS
@@ -335,9 +323,7 @@ def fix_candidate_email_constraints():
             );
         """))
 
-        conn.execute(text("""
-            DROP TABLE IF EXISTS duplicate_cvs_to_delete;
-        """))
+        conn.execute(text("DROP TABLE IF EXISTS duplicate_cvs_to_delete;"))
 
         conn.execute(text("""
             CREATE UNIQUE INDEX unique_candidate_per_offer
@@ -1136,40 +1122,19 @@ with tab_candidat:
         ])
 
         with candidat_tab1:
-            st.markdown("""
-            <div style="
-                padding:32px;
-                border-radius:28px;
-                background:linear-gradient(135deg,#f8fbff,#eef5ff);
-                border:1px solid #e2e8f0;
-                margin-bottom:30px;
-            ">
-                <h2 style="font-size:36px; font-weight:900; color:#0f172a; margin-bottom:10px;">
-                    Nos offres disponibles
-                </h2>
-                <p style="font-size:18px; color:#475569; line-height:1.6;">
-                    Trouvez l’opportunité qui correspond à votre profil et postulez directement en ligne.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="main-title">Nos offres disponibles</div>', unsafe_allow_html=True)
 
-            col_search1, col_search2, col_search3 = st.columns([2, 2, 1.4])
+            col_search1, col_search2, col_search3 = st.columns(3)
 
             with col_search1:
-                search_job = st.text_input(
-                    "🔎 Rechercher",
-                    placeholder="Data Analyst, Python, Power BI, IA..."
-                )
+                search_job = st.text_input("🔎 Recherche", placeholder="Data Analyst, Python, CDI...")
 
             with col_search2:
-                filter_location = st.text_input(
-                    "📍 Lieu",
-                    placeholder="Paris, Lyon, Remote..."
-                )
+                filter_location = st.text_input("📍 Lieu", placeholder="Paris, Lyon, Remote...")
 
             with col_search3:
                 filter_contract = st.selectbox(
-                    "📄 Contrat",
+                    "Contrat",
                     ["Tous", "CDI", "CDD", "Stage", "Alternance", "Freelance", "Intérim"]
                 )
 
@@ -1199,21 +1164,7 @@ with tab_candidat:
                     if filter_contract.lower() in str(offer[4]).lower()
                 ]
 
-            st.markdown(f"""
-            <div style="
-                margin:25px 0;
-                padding:18px 24px;
-                border-radius:18px;
-                background:#ffffff;
-                border:1px solid #e5e7eb;
-                box-shadow:0 4px 16px rgba(0,0,0,0.04);
-                font-size:18px;
-                font-weight:700;
-                color:#0f172a;
-            ">
-                {len(offers)} offre(s) trouvée(s)
-            </div>
-            """, unsafe_allow_html=True)
+            st.info(f"{len(offers)} offre(s) trouvée(s)")
 
             if not offers:
                 st.info("Aucune offre disponible pour le moment.")
@@ -1228,75 +1179,33 @@ with tab_candidat:
                     description = safe_display(description)
                     requirements = safe_display(requirements)
 
-                    short_description = description[:380] + "..." if len(description) > 380 else description
+                    short_description = description[:450] + "..." if len(description) > 450 else description
 
                     st.markdown(f"""
-                    <div style="
-                        padding:30px;
-                        border-radius:26px;
-                        background:#ffffff;
-                        border:1px solid #e5e7eb;
-                        box-shadow:0 8px 26px rgba(15,23,42,0.08);
-                        margin-bottom:24px;
-                    ">
-                        <h3 style="font-size:28px; font-weight:900; color:#0f4cc9; margin-bottom:12px;">
-                            {title}
-                        </h3>
-
-                        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
-                            <span style="background:#eef6ff; color:#0f4cc9; padding:8px 14px; border-radius:999px; font-weight:800;">
-                                🏢 {company_name}
-                            </span>
-                            <span style="background:#f1f5f9; color:#334155; padding:8px 14px; border-radius:999px; font-weight:800;">
-                                📍 {location}
-                            </span>
-                            <span style="background:#ecfdf5; color:#047857; padding:8px 14px; border-radius:999px; font-weight:800;">
-                                📄 {contract_type}
-                            </span>
-                        </div>
-
-                        <p style="font-size:17px; color:#475569; line-height:1.7; margin-bottom:0;">
-                            {short_description}
-                        </p>
+                    <div class="job-card">
+                        <h3>{title}</h3>
+                        <p><b>Entreprise :</b> {company_name}</p>
+                        <p><b>Lieu :</b> {location}</p>
+                        <p><b>Contrat :</b> <span class="badge">{contract_type}</span></p>
+                        <p>{short_description}</p>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    col_btn1, col_btn2, col_btn3 = st.columns([1.2, 1.2, 4])
+                    with st.expander("Consulter l’offre"):
+                        st.write("### Description du poste")
+                        st.write(description)
+                        if requirements:
+                            st.write("### Compétences requises")
+                            st.write(requirements)
 
-                    with col_btn1:
-                        with st.expander("Voir l’offre"):
-                            st.write("### Description")
-                            st.write(description)
-                            if requirements:
-                                st.write("### Compétences requises")
-                                st.write(requirements)
-
-                    with col_btn2:
-                        if st.button("Candidater", key=f"apply_{offer_id}"):
-                            st.session_state.application_offer_id = offer_id
-                            st.rerun()
+                    if st.button("Candidater", key=f"apply_{offer_id}"):
+                        st.session_state.application_offer_id = offer_id
+                        st.rerun()
 
         with candidat_tab2:
-            st.markdown("""
-            <div style="
-                padding:32px;
-                border-radius:28px;
-                background:linear-gradient(135deg,#fff7ed,#fff1f2);
-                border:1px solid #fed7aa;
-                margin-bottom:30px;
-            ">
-                <h2 style="font-size:36px; font-weight:900; color:#0f172a; margin-bottom:10px;">
-                    Candidature spontanée
-                </h2>
-                <p style="font-size:18px; color:#475569; line-height:1.6;">
-                    Vous ne trouvez pas d’offre correspondant à votre profil ? Envoyez-nous votre candidature spontanée.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="main-title">Candidature spontanée</div>', unsafe_allow_html=True)
 
             with st.form("form_spontanee"):
-                st.markdown("### Informations personnelles")
-
                 col_a, col_b = st.columns(2)
 
                 with col_a:
@@ -1307,7 +1216,6 @@ with tab_candidat:
 
                 with col_b:
                     spontaneous_job = st.text_input("Poste recherché")
-
                     spontaneous_availability = st.selectbox(
                         "Disponibilité",
                         ["Immédiate", "Sous 1 semaine", "Sous 2 semaines", "Sous 1 mois", "Sous 3 mois", "À définir"],
@@ -1349,18 +1257,8 @@ with tab_candidat:
                         ["CDI", "CDD", "Stage", "Alternance", "Freelance", "Intérim"]
                     )
 
-                st.markdown("### Votre candidature")
-
-                spontaneous_motivation = st.text_area(
-                    "Message de motivation",
-                    placeholder="Présentez brièvement votre profil, vos compétences et le type de poste recherché..."
-                )
-
-                spontaneous_cv = st.file_uploader(
-                    "Ajoutez votre CV PDF",
-                    type="pdf",
-                    key="spontaneous_cv"
-                )
+                spontaneous_motivation = st.text_area("Message de motivation")
+                spontaneous_cv = st.file_uploader("Ajoutez votre CV PDF", type="pdf", key="spontaneous_cv")
 
                 submit_spontaneous = st.form_submit_button("Envoyer ma candidature spontanée")
 
