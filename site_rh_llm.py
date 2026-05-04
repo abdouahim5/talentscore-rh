@@ -27,7 +27,6 @@ def get_secret(key):
     value = os.getenv(key)
     if value:
         return value
-
     try:
         return st.secrets[key]
     except Exception:
@@ -295,6 +294,7 @@ def create_tables():
 
 def fix_candidate_email_constraints():
     with engine.begin() as conn:
+
         conn.execute(text("""
             ALTER TABLE cvs DROP CONSTRAINT IF EXISTS cvs_candidate_email_key;
         """))
@@ -308,12 +308,32 @@ def fix_candidate_email_constraints():
         """))
 
         conn.execute(text("""
-            DELETE FROM cvs a
-            USING cvs b
-            WHERE a.id > b.id
-            AND LOWER(a.candidate_email) = LOWER(b.candidate_email)
-            AND a.job_offer_id = b.job_offer_id
-            AND a.job_offer_id IS NOT NULL;
+            CREATE TEMP TABLE duplicate_cvs_to_delete AS
+            SELECT a.id
+            FROM cvs a
+            JOIN cvs b
+              ON a.id > b.id
+             AND LOWER(a.candidate_email) = LOWER(b.candidate_email)
+             AND a.job_offer_id = b.job_offer_id
+             AND a.job_offer_id IS NOT NULL;
+        """))
+
+        conn.execute(text("""
+            DELETE FROM cv_scores
+            WHERE cv_id IN (
+                SELECT id FROM duplicate_cvs_to_delete
+            );
+        """))
+
+        conn.execute(text("""
+            DELETE FROM cvs
+            WHERE id IN (
+                SELECT id FROM duplicate_cvs_to_delete
+            );
+        """))
+
+        conn.execute(text("""
+            DROP TABLE IF EXISTS duplicate_cvs_to_delete;
         """))
 
         conn.execute(text("""
@@ -610,14 +630,12 @@ def load_dashboard_stats():
         candidates_count = conn.execute(text("SELECT COUNT(*) FROM cvs")).scalar()
         spontaneous_count = conn.execute(text("SELECT COUNT(*) FROM cvs WHERE job_offer_id IS NULL")).scalar()
         best_score = conn.execute(text("SELECT MAX(final_score) FROM cv_scores")).scalar()
-        avg_score = conn.execute(text("SELECT AVG(final_score) FROM cv_scores")).scalar()
 
     return {
         "offers_count": offers_count or 0,
         "candidates_count": candidates_count or 0,
         "spontaneous_count": spontaneous_count or 0,
-        "best_score": int(best_score) if best_score else 0,
-        "avg_score": int(avg_score) if avg_score else 0
+        "best_score": int(best_score) if best_score else 0
     }
 
 
@@ -834,7 +852,7 @@ st.markdown("""
     margin: 20px 0px;
 }
 
-.card, .job-card {
+.job-card {
     padding: 26px;
     border-radius: 24px;
     background-color: #ffffff;
