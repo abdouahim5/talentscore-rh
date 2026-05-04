@@ -294,12 +294,6 @@ def create_tables():
 
 
 def fix_candidate_email_constraints():
-    """
-    Correction importante :
-    - Une candidature spontanée ne bloque plus une candidature à une offre.
-    - Un candidat peut postuler à plusieurs offres différentes avec le même email.
-    - Le doublon est bloqué uniquement pour la même offre.
-    """
     with engine.begin() as conn:
         conn.execute(text("""
             ALTER TABLE cvs DROP CONSTRAINT IF EXISTS cvs_candidate_email_key;
@@ -311,6 +305,15 @@ def fix_candidate_email_constraints():
 
         conn.execute(text("""
             DROP INDEX IF EXISTS unique_candidate_per_offer;
+        """))
+
+        conn.execute(text("""
+            DELETE FROM cvs a
+            USING cvs b
+            WHERE a.id > b.id
+            AND LOWER(a.candidate_email) = LOWER(b.candidate_email)
+            AND a.job_offer_id = b.job_offer_id
+            AND a.job_offer_id IS NOT NULL;
         """))
 
         conn.execute(text("""
@@ -788,7 +791,7 @@ if "selected_result_offer_id" not in st.session_state:
 
 
 # =====================================================
-# 8. DESIGN CSS
+# 8. CSS
 # =====================================================
 
 st.markdown("""
@@ -903,7 +906,7 @@ st.markdown(f"""
 
 
 # =====================================================
-# 10. NAVIGATION PRINCIPALE
+# 10. NAVIGATION
 # =====================================================
 
 tab_accueil, tab_candidat, tab_recruteur = st.tabs([
@@ -931,7 +934,7 @@ with tab_accueil:
     """, unsafe_allow_html=True)
 
     accueil_tab1, accueil_tab2, accueil_tab3, accueil_tab4 = st.tabs([
-        "Présentation", "Nos valeurs", "Nos métiers", "Contact"
+        "Présentation", "Nos valeurs", "Nos offres", "Contact"
     ])
 
     with accueil_tab1:
@@ -1016,14 +1019,7 @@ with tab_candidat:
             with col_b:
                 availability = st.selectbox(
                     "Disponibilité",
-                    [
-                        "Immédiate",
-                        "Sous 1 semaine",
-                        "Sous 2 semaines",
-                        "Sous 1 mois",
-                        "Sous 3 mois",
-                        "À définir"
-                    ],
+                    ["Immédiate", "Sous 1 semaine", "Sous 2 semaines", "Sous 1 mois", "Sous 3 mois", "À définir"],
                     key=f"availability_{offer_id}"
                 )
 
@@ -1212,14 +1208,7 @@ with tab_candidat:
                     spontaneous_job = st.text_input("Poste recherché")
                     spontaneous_availability = st.selectbox(
                         "Disponibilité",
-                        [
-                            "Immédiate",
-                            "Sous 1 semaine",
-                            "Sous 2 semaines",
-                            "Sous 1 mois",
-                            "Sous 3 mois",
-                            "À définir"
-                        ],
+                        ["Immédiate", "Sous 1 semaine", "Sous 2 semaines", "Sous 1 mois", "Sous 3 mois", "À définir"],
                         key="spontaneous_availability"
                     )
 
