@@ -293,6 +293,33 @@ def create_tables():
             conn.execute(text(migration))
 
 
+def fix_candidate_email_constraints():
+    """
+    Correction importante :
+    - Une candidature spontanée ne bloque plus une candidature à une offre.
+    - Un candidat peut postuler à plusieurs offres différentes avec le même email.
+    - Le doublon est bloqué uniquement pour la même offre.
+    """
+    with engine.begin() as conn:
+        conn.execute(text("""
+            ALTER TABLE cvs DROP CONSTRAINT IF EXISTS cvs_candidate_email_key;
+        """))
+
+        conn.execute(text("""
+            DROP INDEX IF EXISTS unique_candidate_email;
+        """))
+
+        conn.execute(text("""
+            DROP INDEX IF EXISTS unique_candidate_per_offer;
+        """))
+
+        conn.execute(text("""
+            CREATE UNIQUE INDEX unique_candidate_per_offer
+            ON cvs (LOWER(candidate_email), job_offer_id)
+            WHERE job_offer_id IS NOT NULL;
+        """))
+
+
 def ensure_default_company():
     with engine.begin() as conn:
         company = conn.execute(text("""
@@ -743,6 +770,7 @@ def analyze_candidate(job_offer_text, cv_text, file_name):
 
 try:
     create_tables()
+    fix_candidate_email_constraints()
     ensure_default_company()
     clean_empty_offers()
 except Exception as e:
@@ -1039,6 +1067,10 @@ with tab_candidat:
             if st.button("Envoyer ma candidature", key=f"send_{offer_id}"):
                 if not candidate_name or not candidate_email or not candidate_cv:
                     st.error("Veuillez compléter le nom, l’email et ajouter un CV.")
+
+                elif candidature_exists(candidate_email, offer_id):
+                    st.error("Vous avez déjà candidaté à cette offre avec cet email.")
+
                 else:
                     file_path = save_uploaded_file(candidate_cv)
                     candidate_cv.seek(0)
@@ -1403,8 +1435,6 @@ with tab_recruteur:
                     old_description = safe_display(selected_offer[5])
                     old_requirements = safe_display(selected_offer[6])
                     old_is_active = bool(selected_offer[7])
-                    old_created_at = selected_offer[8]
-                    old_updated_at = selected_offer[9]
 
                     st.markdown(f"""
                     <div class="job-card">
